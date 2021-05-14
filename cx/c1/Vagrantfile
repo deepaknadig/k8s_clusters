@@ -1,0 +1,46 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+ENV['VAGRANT_NO_PARALLEL'] = 'yes'
+
+Vagrant.configure(2) do |config|
+
+  config.vm.provision "shell", path: "bootstrap.sh"
+  config.ssh.forward_agent = true
+  config.ssh.forward_x11 = true
+  config.vm.hostname = "c1"
+
+  
+  # Kubernetes Master Server
+  config.vm.define "master1" do |master1|
+    master1.vm.box = "bento/ubuntu-18.04"
+    master1.vm.hostname = "master1.example.com"
+    master1.vm.network "private_network", ip: "172.42.42.100"
+    master1.vm.network "forwarded_port", guest: 5000, host: 5000
+    master1.vm.network "forwarded_port", guest: 8080, host: 8080
+    master1.vm.provider "virtualbox" do |v|
+      v.name = "master1"
+      v.memory = 16384
+      v.cpus = 6
+    end
+    master1.vm.provision "shell", path: "bootstrap_master1.sh"
+  end
+
+  NodeCount = 2
+
+  # Kubernetes Worker Nodes
+  (1..NodeCount).each do |i|
+    config.vm.define "worker1#{i}" do |workernode|
+      workernode.vm.box = "bento/ubuntu-18.04"
+      workernode.vm.hostname = "worker1#{i}.example.com"
+      workernode.vm.network "private_network", ip: "172.42.42.10#{i}"
+      workernode.vm.provider "virtualbox" do |v|
+        v.name = "worker1#{i}"
+        v.memory = 16384
+        v.cpus = 6
+      end
+      workernode.vm.provision "shell", path: "bootstrap_worker1.sh"
+    end
+  end
+
+end
